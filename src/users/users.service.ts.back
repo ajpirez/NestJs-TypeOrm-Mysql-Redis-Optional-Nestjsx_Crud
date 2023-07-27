@@ -1,0 +1,78 @@
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { User } from '../typeorm/entities/User.entity';
+import {
+  CreateUserGroupParams,
+  CreateUserParams,
+  CreateUserPostParams,
+  CreateUserProfileParams,
+  UpdateUserParams,
+} from '../utils/types';
+import { Profile } from '../typeorm/entities/Profile.entity';
+import { Post } from '../typeorm/entities/Post.entity';
+import { Group } from '../typeorm/entities/group.entity';
+import { TypeOrmCrudService } from '@nestjsx/crud-typeorm';
+
+@Injectable()
+export class UsersService extends TypeOrmCrudService<User> {
+  constructor(
+    @InjectRepository(User) repo,
+    @InjectRepository(Profile)
+    private readonly usersProfileRepository: Repository<Profile>,
+    @InjectRepository(Post)
+    private readonly usersPostRepository: Repository<Post>,
+    @InjectRepository(Group)
+    private readonly usersGroupRepository: Repository<Group>,
+  ) {
+    super(repo);
+  }
+
+  async createUserProfile(
+    id,
+    createUserProfileParams: CreateUserProfileParams,
+  ) {
+    const user: User = await this.repo.findOne({ where: { id } });
+    if (!user) throw new NotFoundException('User not found');
+    return this.repo.save({
+      ...user,
+      profile: this.usersProfileRepository.create(createUserProfileParams),
+    });
+  }
+
+  async createUserPosts(id, createUserPostsParams: CreateUserPostParams) {
+    const user: User = await this.repo.findOne({ where: { id } });
+    if (!user) throw new NotFoundException('User not found');
+    return this.repo.save({
+      ...user,
+      posts: [
+        ...user.posts,
+        this.usersPostRepository.create(createUserPostsParams),
+      ],
+    });
+  }
+
+  async createUserGroups(id, createUserGroupParams: CreateUserGroupParams) {
+    const user: User = await this.repo.findOne({ where: { id } });
+    if (!user) throw new NotFoundException('User not found');
+
+    if (user.groups.length) {
+      const names = user.groups.map((x) => x.name);
+      if (names.includes(createUserGroupParams.name)) {
+        throw new BadRequestException(`Group already exists`);
+      }
+    }
+
+    return this.repo.save({
+      ...user,
+      groups: [
+        ...user.groups,
+        this.usersGroupRepository.create(createUserGroupParams),
+      ],
+    });
+  }
+}
