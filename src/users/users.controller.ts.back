@@ -1,0 +1,84 @@
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  ParseIntPipe,
+  Request,
+} from '@nestjs/common';
+import { UsersService } from './users.service';
+import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
+import { User } from '../typeorm/entities/User.entity';
+import { CreateUserProfileDto } from './dto/create-user-profile.dto';
+import { CreateUserPostDto } from './dto/create-user-post.dto';
+import { CreateUserGroupDto } from './dto/create-user-group.dto';
+import {
+  Crud,
+  CrudController,
+  CrudRequest,
+  Override,
+  ParsedBody,
+  ParsedRequest,
+} from '@nestjsx/crud';
+
+@Crud({
+  model: {
+    type: User,
+  },
+  query: {
+    join: {
+      profile: { eager: true },
+      posts: { eager: true },
+      groups: { eager: true },
+    },
+  },
+})
+@Controller('users')
+export class UsersControllerSave implements CrudController<User> {
+  constructor(public service: UsersService) {}
+
+  get base(): CrudController<User> {
+    return this;
+  }
+
+  @Override('createOneBase')
+  async createOneBaseLocal(
+    @ParsedRequest() req: CrudRequest,
+    @ParsedBody() dto: User,
+  ): Promise<User> {
+    try {
+      dto.createdAt = new Date();
+      return this.base.createOneBase(req, dto);
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  @Post(':id/profiles')
+  async createUserProfile(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() createUserProfileDto: CreateUserProfileDto,
+  ) {
+    return this.service.createUserProfile(id, createUserProfileDto);
+  }
+
+  @Post(':id/posts')
+  async createUserPosts(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() createUserPostsDto: CreateUserPostDto,
+  ) {
+    return this.service.createUserPosts(id, createUserPostsDto);
+  }
+
+  @Post(':id/groups')
+  async createUserGroups(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() createUserGroupDto: CreateUserGroupDto,
+  ) {
+    return this.service.createUserGroups(id, createUserGroupDto);
+  }
+}
