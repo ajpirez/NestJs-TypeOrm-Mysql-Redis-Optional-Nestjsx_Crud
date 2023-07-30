@@ -5,6 +5,10 @@ coverage
 /coverage
 /dist
 dist
+mysql
+/mysql
+.husky
+/.husky
 # Logs
 logs
 *.log
